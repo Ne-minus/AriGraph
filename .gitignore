@@ -1,3 +1,4 @@
 graph7.pkl
 *.sh
 venv
+**/__pycache__
