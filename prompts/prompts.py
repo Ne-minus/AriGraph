@@ -4,7 +4,7 @@ The triplets denote facts about the environment where the player moves. The play
 Sometimes there are no triplets to replace:
 Example of existing triplets: "Golden locker, state, open"; "Room K, is west of, Room I"; "Room K, has exit, east".
 Example of new triplets: "Room T, is north of, Room N"; "Room T, has exit, south".
-Example of replacing: []. Nothisg to replace here
+Example of replacing: []. Nothing to replace here
 
 Sometimes several triplets can be replaced with one:
 Example of existing triplets: "kitchen, contains, broom"; "broom, is on, floor".
@@ -32,7 +32,7 @@ New triplets: {new_triplets}.
 Warning! Replacing must be generated strictly in following format: [[outdated_triplet_1 -> actual_triplet_1], [outdated_triplet_2 -> actual_triplet_2], ...], you MUST NOT include any descriptions in answer.
 Replacing: """
 
-prompt_extraction_current = '''Objective: The main goal is to meticulously gather information from game observations and organize this data into a clear, structured knowledge graph.
+prompt_extraction_current = """Objective: The main goal is to meticulously gather information from game observations and organize this data into a clear, structured knowledge graph.
 
 Guidelines for Building the Knowledge Graph:
 
@@ -57,11 +57,10 @@ Observation: {observation}
 
 Remember that triplets must be extracted in format: "subject_1, relation_1, object_1; subject_2, relation_2, object_2; ..."
 
-Extracted triplets: '''
+Extracted triplets: """
 
 
-
-prompt_extraction_thesises = '''Objective: The main goal is to meticulously gather information from input text and organize this data into a clear, structured knowledge graph.
+prompt_extraction_thesises = """Objective: The main goal is to meticulously gather information from input text and organize this data into a clear, structured knowledge graph.
 
 Guidelines for Building the Knowledge Graph:
 
@@ -84,9 +83,9 @@ For example, you better extract thesis "North exit from kitchen is blocked by do
 because without context of kitchen "north exit is blocked by door" can be related to every room at home.
 
 Text: {observation}
-Remember that thesises must be extracted in format: "thesis_1; [list of entites for thesis_1]. thesis2; [list of entites for thesis_2]. etc.'''
+Remember that thesises must be extracted in format: "thesis_1; [list of entites for thesis_1]. thesis2; [list of entites for thesis_2]. etc."""
 
-prompt_refining_thesises = '''You will be provided with list of existing thesises and list of new thesises. 
+prompt_refining_thesises = """You will be provided with list of existing thesises and list of new thesises. 
 The thesises denote facts about the environment where the player moves. The player takes actions and the environment changes, so some thesises from the list of existing thesises can be replaced with one of the new thesises. For example, the player took the item from the locker and the existing thesis "item is in locker" should be replaced with the new thesis "item is in inventory".
 
 Sometimes there are no thesises to replace:
@@ -122,11 +121,11 @@ Existing thesises: {ex_thesises}.
 New thesises: {new_thesises}.
 ####
 Warning! Replacing must be generated strictly in following format: ["new_thesis_1 <- outdated_thesis_1"; "new_thesis_2 <- outdated_thesis_2"; ...], you MUST NOT include any descriptions in answer.
-Replacing: '''
+Replacing: """
 
-reflex_prompt = '''You are a learner in system of AI agents which play in text games. Your task is to find useful patterns in observations and explain it for future usage. Namely, you should find the unefficiency in previous behaviour and the patterns that can help to avoid this unefficiency.
+reflex_prompt = """You are a learner in system of AI agents which play in text games. Your task is to find useful patterns in observations and explain it for future usage. Namely, you should find the unefficiency in previous behaviour and the patterns that can help to avoid this unefficiency.
 Your answer must be brief and accurate and contain only three sentences. 
 ####
 {for_reflex}
 ####
-Your answer: '''
+Your answer: """
