@@ -2,6 +2,7 @@ from openai import OpenAI
 from openai._types import NOT_GIVEN
 from typing import List
 from copy import deepcopy
+import pickle
 
 from utils.contriever import Retriever
 from prompts.assistant_prompts import (
@@ -15,27 +16,38 @@ from utils.utils import (
     find_top_episodic_emb,
     top_k_obs,
     Logger,
+    clear_triplet_qa,
 )
-
-
-def clear_triplet(triplet):
-    return [
-        triplet[0].lower().strip(""""'. `;:"""),
-        triplet[1].lower().strip(""""'. `;:"""),
-        {"label": triplet[2]["label"].lower().strip(""""'. `;:""")},
-    ]
 
 
 class AssistantGraph:
     def __init__(
-        self, model: str, system_prompt: str, api_key: str, device: str = "cpu"
+        self,
+        model: str,
+        system_prompt: str,
+        api_key: str,
+        device: str = "cpu",
+        text_max_length: int = 10000,
     ):
         self.triplets = []
+        self.user_input_to_episodic = {}
         self.model = model
         self.system_prompt = system_prompt
         self.total_amount = 0
         self.client = OpenAI(api_key=api_key)
         self.retriever = Retriever(device)
+        self.text_max_length = text_max_length
+
+    def save_to_file(self, filepath):
+        data = (self.triplets, self.user_input_to_episodic)
+        with open(filepath, "wb") as f:
+            pickle.dump(data, f)
+
+    def load_from_file(self, filepath):
+        with open(filepath, "rb") as f:
+            data = pickle.load(f)
+        self.triplets = data[0]
+        self.user_input_to_episodic = data[1]
 
     def generate(self, prompt: str, return_json: bool = False, t: float = 0.7):
         if return_json:
@@ -76,11 +88,12 @@ class AssistantGraph:
 
     def delete_all(self):
         self.triplets = []
+        self.user_input_to_episodic = {}
 
     def exclude(self, triplets):
         new_triplets = []
         for triplet in triplets:
-            triplet = clear_triplet(triplet)
+            triplet = clear_triplet_qa(triplet)
             if triplet not in self.triplets:
                 new_triplets.append(AssistantGraph.to_str(triplet))
 
@@ -113,9 +126,6 @@ class AssistantGraph:
                             now.add(triplet[0])
 
                         break
-
-            if "itself" in now:
-                now.remove("itself")
             items = now
         return associated_triplets
 
@@ -124,11 +134,11 @@ class AssistantGraph:
 
     def add_triplets(self, triplets):
         for triplet in triplets:
-            triplet = clear_triplet(triplet)
+            triplet = clear_triplet_qa(triplet)
             if triplet not in self.triplets:
                 self.triplets.append(triplet)
 
-    def update(
+    def update_and_retrieve(
         self,
         user_input: str,
         prev_subgraph: set,
@@ -136,16 +146,56 @@ class AssistantGraph:
         logger: Logger,
         topk_episodic: int = 2,
     ):
+        new_triplets = self._update(user_input, prev_subgraph, logger)
+        triplets = self.triplets_to_str(self.triplets)
+
+        associated_subgraph = set()
+
+        # Perform BFS for retrieving associated subgraph
+        for query, depth in new_entities_dict.items():
+            results = graph_retr_search(
+                query,
+                triplets,
+                self.retriever,
+                max_depth=depth,
+                topk=6,
+                post_retrieve_threshold=0.75,
+                verbose=2,
+            )
+            associated_subgraph.update(results)
+
+        # Return edges that are not in user's triplets already
+        associated_subgraph = [
+            element for element in associated_subgraph if element not in new_triplets
+        ]
+
+        # Get episodes that are most relevant for current user input
+        user_input_emb = self.retriever.embed([user_input])
+        top_episodic_dict = find_top_episodic_emb(
+            prev_subgraph,
+            deepcopy(self.user_input_to_episodic),
+            user_input_emb,
+            self.retriever,
+        )
+        top_episodic = top_k_obs(top_episodic_dict, k=topk_episodic)
+
+        # Update episodic memory
+        obs_value = [new_triplets, user_input_emb]
+        self.user_input_to_episodic[user_input] = obs_value
+
+        return associated_subgraph, top_episodic
+
+    def _update(self, text: str, prev_subgraph: List, logger: Logger):
         # Extract triplets from user input with relevance scores
         prompt = prompt_extraction_assistant.format(
-            user_input=user_input, prev_subgraph=prev_subgraph
+            user_input=text, prev_subgraph=prev_subgraph
         )
         response, _ = self.generate(prompt, t=0.001)
 
         # Preprocess extracted triplets
         new_triplets_raw = process_triplets(response)
 
-        # Exclude new triplets that are already in the graph
+        # Exclude triplets that are already in the graph
         new_triplets = self.exclude(new_triplets_raw)
 
         logger("New triplets: " + str(new_triplets))
@@ -170,26 +220,20 @@ class AssistantGraph:
         # Add new triplets to a graph
         self.add_triplets(new_triplets_raw)
 
-        triplets = self.triplets_to_str(self.triplets)
+        return new_triplets
 
-        associated_subgraph = set()
+    def split_text(self, text: str):
+        lines = text.split("\n")
+        lines = [line for line in lines if len(line) > 0]
+        result = []
+        for line in lines:
+            if len(result) > 0 and len(result[-1]) + len(line) < self.text_max_length:
+                result[-1] = "\n".join([result[-1], line])
+            else:
+                result.append(line)
+        return result
 
-        # Perform BFS for retrieving associated subgraph
-        for query, depth in new_entities_dict.items():
-            results = graph_retr_search(
-                query,
-                triplets,
-                self.retriever,
-                max_depth=depth,
-                topk=6,
-                post_retrieve_threshold=0.75,
-                verbose=2,
-            )
-            associated_subgraph.update(results)
-
-        # Return edges that are not in user's triplets already
-        associated_subgraph = [
-            element for element in associated_subgraph if element not in new_triplets
-        ]
-
-        return associated_subgraph
+    def update(self, text: str, logger: Logger):
+        chunks = self.split_text(text)
+        for chunk in chunks:
+            self._update(chunk, [], logger)

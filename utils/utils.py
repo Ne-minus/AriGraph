@@ -7,6 +7,7 @@ import numpy as np
 from copy import deepcopy
 from inspect import signature
 import matplotlib.pyplot as plt
+from typing import List
 
 
 def find_args(callable, args):
@@ -204,6 +205,14 @@ def clear_triplet(triplet):
         triplet = ("player", triplet[1], triplet[2])
     if triplet[1] == "P":
         triplet = (triplet[0], "player", triplet[2])
+    return [
+        triplet[0].lower().strip(""""'. `;:"""),
+        triplet[1].lower().strip(""""'. `;:"""),
+        {"label": triplet[2]["label"].lower().strip(""""'. `;:""")},
+    ]
+
+
+def clear_triplet_qa(triplet):
     return [
         triplet[0].lower().strip(""""'. `;:"""),
         triplet[1].lower().strip(""""'. `;:"""),
@@ -508,3 +517,14 @@ def find_unexplored_exits_thesises(location, triplets, thesises):
     if unexplored_exits == set():
         output = "none"
     return output
+
+
+def get_qa_prompt_from_subgraph(
+    user_input: str, subgraph: List, top_episodic: List, history: List
+):
+    return f"""\n1. Use the following information first and then the general one from your memory if needed
+\n2. History of {len(history)} last messages: {history} 
+\n3. Your current message from the user: {user_input}
+\n4. Information from the memory module that can be relevant to current dialogue: {subgraph}
+\n5. Your {len(top_episodic)} most relevant episodic memories from the past for the current situation: {top_episodic}.
+"""

@@ -19,7 +19,7 @@ If there is information that you read something, do not forget to incluse triple
 
 Example of triplets you have extracted before: {prev_subgraph}
 
-User input: {user_input}
+User input: <START OF INPUT>{user_input}<END OF INPUT>
 
 Remember that triplets must be extracted in format: "subject_1, relation_1, object_1; subject_2, relation_2, object_2; ..."
 
