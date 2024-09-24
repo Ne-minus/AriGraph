@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>HR AI Chat Assistant</title>
+  <link rel="stylesheet" href="{% static 'ariassist/css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>AI HR Assistant</h2>
+    </div>
+    <div class="chat-box" id="chat-box">
+        <!-- Chat messages will be dynamically added here -->
+    </div>
+    <div class="chat-input-container">
+        <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off">
+        <button id="send-btn">Send</button>
+    </div>
+</div>
+
+  <script src="{% static 'ariassist/js/script.js' %}"></script>
+</body>
+</html>

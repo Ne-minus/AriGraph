@@ -2,7 +2,7 @@ import sys
 
 import torch
 
-#First you need to download contriver repo:
+# First you need to download contriver repo:
 # https://github.com/facebookresearch/contriever
 # specify path to contriever repo:
 # contriever_path = "/home/griver/projects/ml/nlp/contriever/"
@@ -24,7 +24,9 @@ class Retriever:
     @staticmethod
     @torch.no_grad()
     def get_embeddings(list_of_strings, embedder, tokenizer):
-        inputs = tokenizer(list_of_strings, padding=True, truncation=True, return_tensors="pt").to(embedder.device)
+        inputs = tokenizer(
+            list_of_strings, padding=True, truncation=True, return_tensors="pt"
+        ).to(embedder.device)
         embeds = embedder(**inputs)
         return embeds
 
@@ -38,13 +40,13 @@ class Retriever:
         return self.get_embeddings(list_of_str, self.embedder, self.tokenizer)
 
     def search(
-            self,
-            key_strings,
-            query_strings,
-            topk: int=None,
-            similarity_threshold: float=None,
-            return_embeds=False,
-            return_scores=False,
+        self,
+        key_strings,
+        query_strings,
+        topk: int = None,
+        similarity_threshold: float = None,
+        return_embeds=False,
+        return_scores=False,
     ):
         """
         Finds most_similar key strings for each of query string and returns these strings and their indices
@@ -75,12 +77,19 @@ class Retriever:
         key_embeds = self.embed(key_strings)
         query_embeds = self.embed(query_strings)
         result = self.search_in_embeds(
-            key_embeds, query_embeds, topk, similarity_threshold, return_embeds, return_scores
+            key_embeds,
+            query_embeds,
+            topk,
+            similarity_threshold,
+            return_embeds,
+            return_scores,
         )
 
-        result['strings'] = [[key_strings[k_id] for k_id in result['idx'][q_id] ] for q_id in range(num_q)]
+        result["strings"] = [
+            [key_strings[k_id] for k_id in result["idx"][q_id]] for q_id in range(num_q)
+        ]
         if not batch_request:
-            result = {k: v[0] for k,v in result.items()}
+            result = {k: v[0] for k, v in result.items()}
 
         return result
 
@@ -89,8 +98,8 @@ class Retriever:
     def search_in_embeds(
         key_embeds,
         query_embeds,
-        topk: int=None,
-        similarity_threshold: float=None,
+        topk: int = None,
+        similarity_threshold: float = None,
         return_embeds=False,
         return_scores=False,
     ):
@@ -114,39 +123,42 @@ class Retriever:
         )
         """
         if int(topk is None) + int(similarity_threshold is None) != 1:
-            raise ValueError("You should specify either topk or similarity_threshold but not both!")
+            raise ValueError(
+                "You should specify either topk or similarity_threshold but not both!"
+            )
 
-        scores = query_embeds  @ key_embeds.T # shape: (num_keys,) or (num_queries, num_keys)
+        scores = (
+            query_embeds @ key_embeds.T
+        )  # shape: (num_keys,) or (num_queries, num_keys)
         batch_request = len(query_embeds.shape) > 1
 
         if not batch_request:
-            scores = scores.reshape(1, -1) # shape: (num_queries, num_keys)
+            scores = scores.reshape(1, -1)  # shape: (num_queries, num_keys)
         num_q = scores.shape[0]
 
         if topk:
             sorted_idx = scores.argsort(-1, descending=True)  # sort for each query
-            selected_idx = sorted_idx[:,:topk]
-            #selected_scores = scores.gather(1, index=selected_idx)
+            selected_idx = sorted_idx[:, :topk]
+            # selected_scores = scores.gather(1, index=selected_idx)
             selected_idx = selected_idx.tolist()
         else:
             selected_idx = [[] for i in range(num_q)]
-            for (q_id, k_id) in (scores >= similarity_threshold).nonzero():
+            for q_id, k_id in (scores >= similarity_threshold).nonzero():
                 selected_idx[q_id].append(k_id)
 
         result = dict(idx=selected_idx)
 
         if return_embeds:
-            result['embeds'] = [
-                 [key_embeds[k_id] for k_id in selected_idx[q_id]]
-                 for q_id in range(num_q)
+            result["embeds"] = [
+                [key_embeds[k_id] for k_id in selected_idx[q_id]]
+                for q_id in range(num_q)
             ]
         if return_scores:
-            result['scores'] = [
-                 [scores[q_id, k_id] for k_id in selected_idx[q_id]]
-                 for q_id in range(num_q)
+            result["scores"] = [
+                [scores[q_id, k_id] for k_id in selected_idx[q_id]]
+                for q_id in range(num_q)
             ]
         if not batch_request:
-            result = {k: v[0] for k,v in result.items()}
+            result = {k: v[0] for k, v in result.items()}
 
         return result
-

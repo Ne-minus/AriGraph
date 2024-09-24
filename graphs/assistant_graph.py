@@ -116,10 +116,10 @@ class AssistantGraph:
             for triplet in self.triplets:
                 for item in items:
 
-                    if (item == triplet[0] or item == triplet[1]) and self.str(
-                        triplet
-                    ) not in associated_triplets:
-                        associated_triplets.append(self.str(triplet))
+                    if (
+                        item == triplet[0] or item == triplet[1]
+                    ) and AssistantGraph.to_str(triplet) not in associated_triplets:
+                        associated_triplets.append(AssistantGraph.to_str(triplet))
                         if item == triplet[0]:
                             now.add(triplet[1])
                         if item == triplet[1]:
@@ -151,18 +151,19 @@ class AssistantGraph:
 
         associated_subgraph = set()
 
-        # Perform BFS for retrieving associated subgraph
-        for query, depth in new_entities_dict.items():
-            results = graph_retr_search(
-                query,
-                triplets,
-                self.retriever,
-                max_depth=depth,
-                topk=6,
-                post_retrieve_threshold=0.75,
-                verbose=2,
-            )
-            associated_subgraph.update(results)
+        if len(triplets) > 0:
+            # Perform BFS for retrieving associated subgraph
+            for query, depth in new_entities_dict.items():
+                results = graph_retr_search(
+                    query,
+                    triplets,
+                    self.retriever,
+                    max_depth=depth,
+                    topk=6,
+                    post_retrieve_threshold=0.75,
+                    verbose=2,
+                )
+                associated_subgraph.update(results)
 
         # Return edges that are not in user's triplets already
         associated_subgraph = [

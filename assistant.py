@@ -50,24 +50,16 @@ class Assistant:
         return response
 
 
-def main():
-    logger = Logger("assistant")
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    model = "gpt-4o-mini"
+logger = Logger("assistant")
+openai_api_key = os.getenv("OPENAI_API_KEY")
+model = "gpt-4o-mini"
 
-    assistant = Assistant(model, openai_api_key)
-    # graph_filepath = "graph.pickle"
-    # assistant.update_from_file("documents/yandex_internship.txt", logger)
-    # assistant.graph.save_to_file(graph_filepath)
-    # assistant.graph.load_from_file(graph_filepath)
-    print(assistant.graph.triplets)
-
-    # while True:
-    #     print("<", end=" ")
-    #     user_input = input()
-    #     response = assistant.answer(user_input, logger)
-    #     print(f"{response}")
+assistant = Assistant(model, openai_api_key)
+graph_filepath = "../graph.pickle"
+# assistant.update_from_file("documents/yandex_internship.txt", logger)
+# assistant.graph.save_to_file(graph_filepath)
+assistant.graph.load_from_file(graph_filepath)
 
 
-if __name__ == "__main__":
-    main()
+def chat_response(user_input):
+    return assistant.answer(user_input, logger)
